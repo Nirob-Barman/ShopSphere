@@ -1,0 +1,71 @@
+﻿## Ignore Visual Studio files
+.vs/
+*.user
+*.suo
+
+## Ignore build results
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+*.log
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Rider
+.idea/
+
+## ASP.NET temporary files
+App_Data/
+*.dbmdl
+
+## User-specific files
+*.userosscache
+*.sln.docstates
+
+## Web publish
+*.Publish.xml
+*.pubxml
+*.publishproj
+
+## IIS Express
+.vsconfig
+/.vs/
+iisexpress/
+*.vspscc
+
+## Resharper
+_ReSharper*/
+*.DotSettings.user
+
+## Entity Framework
+Migrations/*.Designer.cs
+*.edmx.sql
+*.edmx.diagram
+
+## Logs
+*.log
+*.tlog
+*.bak
+*.cache
+
+## Others
+*.tmp
+*.temp
+*.pidb
+*.pid
+*.svclog
+*.orig
+
+## Environment files
+appsettings.json
+appsettings.*.json
+.env
+.env.*
+secrets.json
