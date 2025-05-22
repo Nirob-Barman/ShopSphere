@@ -33,6 +33,10 @@ namespace ShopSphere.Application.Wrappers
 
         public static ApiResponse<T> SuccessResponse(T data, string message = "", int statusCode = 200)
         {
+            if (typeof(T) == typeof(string) && string.IsNullOrWhiteSpace(message) && data is string strData)
+            {
+                message = strData;
+            }
             return new ApiResponse<T>(data, message, statusCode);
         }
 

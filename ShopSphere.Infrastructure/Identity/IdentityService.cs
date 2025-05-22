@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ShopSphere.Application.DTOs.Admin;
 using ShopSphere.Application.DTOs.Auth;
 using ShopSphere.Application.Interfaces;
 using ShopSphere.Application.Interfaces.Email;
@@ -18,15 +19,17 @@ namespace ShopSphere.Infrastructure.Identity
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public IdentityService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IJwtTokenService jwtTokenService, ApplicationDbContext context, IEmailService emailService, IHttpContextAccessor httpContextAccessor)
+        public IdentityService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager, IJwtTokenService jwtTokenService, ApplicationDbContext context, IEmailService emailService, IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
             _jwtTokenService = jwtTokenService;
             _context = context;
             _emailService = emailService;
@@ -112,7 +115,8 @@ namespace ShopSphere.Infrastructure.Identity
             if (string.IsNullOrEmpty(userId))
                 return ApiResponse<UserProfileResponse>.UnauthorizedResponse("User ID not found in token.");
 
-            var user = await _userManager.FindByIdAsync(userId);
+            //var user = await _userManager.FindByIdAsync(userId);
+            var user = await FindUserByIdAsync(userId);
             if (user == null)
                 return ApiResponse<UserProfileResponse>.NotFoundResponse("User not found.");
 
@@ -141,7 +145,9 @@ namespace ShopSphere.Infrastructure.Identity
             _context.RefreshTokens.Update(token);
             await _context.SaveChangesAsync();
 
-            var user = await _userManager.FindByIdAsync(token.UserId!)
+            //var user = await _userManager.FindByIdAsync(token.UserId!)
+                       //?? throw new Exception("User not found");
+            var user = await FindUserByIdAsync(token.UserId!)
                        ?? throw new Exception("User not found");
 
             return await GenerateTokensAsync(user);
@@ -212,7 +218,7 @@ namespace ShopSphere.Infrastructure.Identity
 
             await _emailService.SendEmailAsync(user.Email!, "Password Reset Request", message);
 
-            return ApiResponse<string>.SuccessResponse("Password reset link has been sent to your email.");
+            return ApiResponse<string>.SuccessResponse(resetLink, "Password reset link has been sent to your email.");
         }
 
         public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest request)
@@ -233,6 +239,148 @@ namespace ShopSphere.Infrastructure.Identity
             return ApiResponse<string>.SuccessResponse("Password has been reset successfully.");
         }
 
+        public async Task<ApiResponse<RoleActionResponse>> CreateRoleAsync(CreateRoleRequest request)
+        {
+            //var roleExists = await _roleManager.RoleExistsAsync(request.RoleName!);
+            var roleExists = await RoleExistsAsync(request.RoleName!);
+            if (roleExists)
+            {
+                return ApiResponse<RoleActionResponse>.ConflictResponse("Role creation failed", new[] { "Role already exists." });
+            }
 
+            var role = new IdentityRole(request.RoleName!);
+            var result = await _roleManager.CreateAsync(role);
+
+            if (result.Succeeded)
+            {
+                return ApiResponse<RoleActionResponse>.SuccessResponse(new RoleActionResponse { RoleName = request.RoleName! }, "Role created successfully");
+            }
+
+            var errors = result.Errors.Select(e => e.Description).ToArray();
+            return ApiResponse<RoleActionResponse>.BadRequestResponse("Role creation failed", errors);
+        }
+
+
+        public async Task<ApiResponse<RoleActionResponse>> DeleteRoleAsync(DeleteRoleRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RoleName))
+            {
+                return ApiResponse<RoleActionResponse>.ValidationErrorResponse("Validation failed", new[] { "Role name must not be empty." });
+            }
+
+            if (request.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return ApiResponse<RoleActionResponse>.FailResponse("Role deletion blocked", "Cannot delete the 'Admin' role.");
+            }
+
+            var role = await _roleManager.FindByNameAsync(request.RoleName);
+            if (role == null)
+            {
+                return ApiResponse<RoleActionResponse>.NotFoundResponse("Role not found");
+            }
+
+            var usersInRole = await _userManager.GetUsersInRoleAsync(request.RoleName);
+            if (usersInRole.Any())
+            {
+                return ApiResponse<RoleActionResponse>.FailResponse(
+                    "Role deletion failed",
+                    $"There are {usersInRole.Count} user(s) assigned to this role. Please remove them first."
+                );
+            }
+
+            var result = await _roleManager.DeleteAsync(role);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description).ToArray();
+                return ApiResponse<RoleActionResponse>.BadRequestResponse("Role deletion failed", errors);
+            }
+
+            return ApiResponse<RoleActionResponse>.SuccessResponse(new RoleActionResponse { RoleName = request.RoleName }, "Role deleted successfully.");
+        }
+
+        public async Task<ApiResponse<RoleAssignmentResponse>> AssignRoleAsync(AssignRoleRequest request)
+        {
+            //var user = await _userManager.FindByIdAsync(request.UserId!);
+            var user = await FindUserByIdAsync(request.UserId!);
+            if (user == null)
+            {
+                return ApiResponse<RoleAssignmentResponse>.NotFoundResponse("User not found");
+            }
+
+            //var roleExists = await _roleManager.RoleExistsAsync(request.RoleName!);
+            var roleExists = await RoleExistsAsync(request.RoleName!);
+            if (!roleExists)
+            {
+                return ApiResponse<RoleAssignmentResponse>.NotFoundResponse("Role not found");
+            }
+
+            var result = await _userManager.AddToRoleAsync(user, request.RoleName!);
+
+            if (result.Succeeded)
+            {
+                var response = new RoleAssignmentResponse
+                {
+                    UserId = user.Id,
+                    RoleName = request.RoleName!
+                };
+                return ApiResponse<RoleAssignmentResponse>.SuccessResponse(response, $"Role {request.RoleName} assigned to user successfully");
+            }
+
+            var errors = result.Errors.Select(e => e.Description).ToArray();
+            return ApiResponse<RoleAssignmentResponse>.BadRequestResponse("Role assignment failed", errors);
+        }
+
+        public async Task<ApiResponse<RoleRemovalResponse>> RemoveRoleAsync(RemoveRoleRequest request)
+        {
+            //var user = await _userManager.FindByIdAsync(request.UserId!);
+            var user = await FindUserByIdAsync(request.UserId!);
+            if (user == null)
+            {
+                return ApiResponse<RoleRemovalResponse>.NotFoundResponse("User not found");
+            }
+
+            //var roleExists = await _roleManager.RoleExistsAsync(request.RoleName!);
+            var roleExists = await RoleExistsAsync(request.RoleName!);
+            if (!roleExists)
+            {
+                return ApiResponse<RoleRemovalResponse>.NotFoundResponse("Role not found");
+            }
+
+            var isInRole = await _userManager.IsInRoleAsync(user, request.RoleName!);
+            if (!isInRole)
+            {
+                return ApiResponse<RoleRemovalResponse>.BadRequestResponse("User is not assigned to this role");
+            }
+
+            var result = await _userManager.RemoveFromRoleAsync(user, request.RoleName!);
+            if (result.Succeeded)
+            {
+                var response = new RoleRemovalResponse
+                {
+                    UserId = user.Id,
+                    RoleName = request.RoleName!
+                };
+
+                return ApiResponse<RoleRemovalResponse>.SuccessResponse(response, $"Role {request.RoleName} removed from user {user.Email} successfully");
+            }
+
+            var errors = result.Errors.Select(e => e.Description).ToArray();
+            return ApiResponse<RoleRemovalResponse>.BadRequestResponse("Failed to remove role", errors);
+        }
+
+        private async Task<ApplicationUser?> FindUserByIdAsync(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return null;
+
+            return await _userManager.FindByIdAsync(userId);
+        }
+
+        private async Task<bool> RoleExistsAsync(string roleName)
+        {
+            if (string.IsNullOrWhiteSpace(roleName))
+                return false;
+            return await _roleManager.RoleExistsAsync(roleName);
+        }
     }
 }

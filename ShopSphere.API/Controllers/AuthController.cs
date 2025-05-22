@@ -77,7 +77,5 @@ namespace ShopSphere.API.Controllers
             var result = await _identityService.ResetPasswordAsync(request);
             return StatusCode(result.StatusCode, result);
         }
-
-
     }
 }
