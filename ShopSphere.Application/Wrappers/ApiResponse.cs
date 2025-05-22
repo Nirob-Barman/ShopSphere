@@ -4,7 +4,7 @@ namespace ShopSphere.Application.Wrappers
     public class ApiResponse<T>
     {
         public int StatusCode { get; set; }
-        public string Message { get; set; } = string.Empty;
+        public string? Message { get; set; }
         public bool Success { get; set; }
         public T? Data { get; set; }
         public object? Errors { get; set; }
@@ -15,7 +15,8 @@ namespace ShopSphere.Application.Wrappers
         {
             Data = data;
             Message = message;
-            Success = true;
+            //Success = true;
+            Success = statusCode is >= 200 and < 300;
             StatusCode = statusCode;
         }
 
@@ -59,7 +60,10 @@ namespace ShopSphere.Application.Wrappers
         {
             return FailResponse(message, errors, 409);
         }
-
+        public static ApiResponse<T> ValidationErrorResponse(string message = "Validation Failed", object? errors = null)
+        {
+            return FailResponse(message, errors, 422);
+        }
         public static ApiResponse<T> InternalServerError(string message = "Internal Server Error", object? errors = null)
         {
             return FailResponse(message, errors, 500);

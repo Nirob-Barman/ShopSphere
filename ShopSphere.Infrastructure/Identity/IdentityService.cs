@@ -38,13 +38,13 @@ namespace ShopSphere.Infrastructure.Identity
             var validationErrors = RegisterRequestValidator.Validate(request);
             if (validationErrors.Any())
             {
-                return ApiResponse<RegisterResponse>.BadRequestResponse("Validation failed", validationErrors);
+                return ApiResponse<RegisterResponse>.ValidationErrorResponse("Validation failed", validationErrors);
             }
 
             var existingUser = await _userManager.FindByEmailAsync(request.Email!);
             if (existingUser != null)
             {
-                return ApiResponse<RegisterResponse>.BadRequestResponse("Registration failed", new[] { "A user with this email already exists." });
+                return ApiResponse<RegisterResponse>.ConflictResponse("Registration failed", new[] { "A user with this email already exists." });
             }
 
             // Start a transaction
@@ -88,7 +88,7 @@ namespace ShopSphere.Infrastructure.Identity
             var validationErrors = LoginRequestValidator.Validate(request);
             if (validationErrors.Any())
             {
-                return ApiResponse<AuthResponse>.BadRequestResponse("Validation failed", validationErrors);
+                return ApiResponse<AuthResponse>.ValidationErrorResponse("Validation failed", validationErrors);
             }
             var user = await _userManager.FindByEmailAsync(request.Email!);
             if (user == null)
