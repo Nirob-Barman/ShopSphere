@@ -2,13 +2,43 @@
 .vs/
 *.user
 *.suo
+*.sln.docstates
 
-## Ignore build results
+## Ignore Visual Studio Code files
+.vscode/
+
+## Ignore Rider files
+.idea/
+
+## Build results
 bin/
 obj/
 [Bb]uild/
 [Ll]og/
 *.log
+artifacts/
+TestResults/
+
+## ASP.NET temporary files
+App_Data/
+*.dbmdl
+
+## IIS Express
+iisexpress/
+.vsconfig
+
+## Entity Framework
+Migrations/*.Designer.cs
+*.edmx.sql
+*.edmx.diagram
+
+## User-specific files
+*.userosscache
+*.userprefs
+
+## Resharper
+_ReSharper*/
+*.DotSettings.user
 
 ## NuGet
 *.nupkg
@@ -16,56 +46,43 @@ obj/
 packages/
 project.lock.json
 project.fragment.lock.json
-artifacts/
 
-## Rider
-.idea/
-
-## ASP.NET temporary files
-App_Data/
-*.dbmdl
-
-## User-specific files
-*.userosscache
-*.sln.docstates
+## Logs and temp
+*.tlog
+*.tmp
+*.temp
+*.bak
+*.cache
+*.svclog
+*.orig
+*.pidb
+*.pid
 
 ## Web publish
 *.Publish.xml
 *.pubxml
 *.publishproj
 
-## IIS Express
-.vsconfig
-/.vs/
-iisexpress/
-*.vspscc
-
-## Resharper
-_ReSharper*/
-*.DotSettings.user
-
-## Entity Framework
-Migrations/*.Designer.cs
-*.edmx.sql
-*.edmx.diagram
-
-## Logs
-*.log
-*.tlog
-*.bak
-*.cache
-
-## Others
-*.tmp
-*.temp
-*.pidb
-*.pid
-*.svclog
-*.orig
-
-## Environment files
+## Environment files & secrets
 appsettings.json
 appsettings.*.json
 .env
 .env.*
 secrets.json
+
+## Clean Architecture-specific
+**/ShopSphere.Infrastructure/Persistence/Migrations/
+**/ShopSphere.Infrastructure/Migrations/
+
+## Optional: OS/IDE noise
+.DS_Store
+Thumbs.db
+
+## Optional: JetBrains cache
+.idea/.idea.*
+
+## Optional: Rider caches
+.idea/.idea_modules/
+.idea/.idea_content_model/
+.idea/.idea_system/
+.idea/workspace.xml
