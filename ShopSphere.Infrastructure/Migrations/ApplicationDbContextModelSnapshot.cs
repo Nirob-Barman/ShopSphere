@@ -22,6 +22,21 @@ namespace ShopSphere.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CategoryProduct", b =>
+                {
+                    b.Property<Guid>("CategoriesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("CategoriesId", "ProductsId");
+
+                    b.HasIndex("ProductsId");
+
+                    b.ToTable("ProductCategories", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -155,6 +170,133 @@ namespace ShopSphere.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ShopSphere.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("ParentCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("ParentCategoryId");
+
+                    b.ToTable("Categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("b3f9fd1c-7b93-4fd3-91b8-9354a8b49f67"),
+                            Name = "Electronics"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2c679cb-7b6b-4a5a-b0a9-1f8a92e77485"),
+                            Name = "Smartphones",
+                            ParentCategoryId = new Guid("b3f9fd1c-7b93-4fd3-91b8-9354a8b49f67")
+                        },
+                        new
+                        {
+                            Id = new Guid("d029d029-72b1-4f75-8035-919a4975c74e"),
+                            Name = "Laptops",
+                            ParentCategoryId = new Guid("b3f9fd1c-7b93-4fd3-91b8-9354a8b49f67")
+                        },
+                        new
+                        {
+                            Id = new Guid("39f9edb3-7d53-46b8-a2b5-8eb9d17f97f3"),
+                            Name = "Fashion"
+                        },
+                        new
+                        {
+                            Id = new Guid("7b4c5a91-dc88-4a64-b51c-92ad77c994f8"),
+                            Name = "Clothing",
+                            ParentCategoryId = new Guid("39f9edb3-7d53-46b8-a2b5-8eb9d17f97f3")
+                        },
+                        new
+                        {
+                            Id = new Guid("2d4b6f9b-0d83-4a8e-9e16-e78f1ab62d74"),
+                            Name = "Accessories",
+                            ParentCategoryId = new Guid("39f9edb3-7d53-46b8-a2b5-8eb9d17f97f3")
+                        });
+                });
+
+            modelBuilder.Entity("ShopSphere.Domain.Entities.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SKU")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SellerId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("ShopSphere.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<string>("Token")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Token");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("ShopSphere.Infrastructure.Identity.Entity.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -223,36 +365,19 @@ namespace ShopSphere.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("ShopSphere.Infrastructure.Identity.Entity.RefreshToken", b =>
+            modelBuilder.Entity("CategoryProduct", b =>
                 {
-                    b.Property<string>("Token")
-                        .HasColumnType("nvarchar(450)");
+                    b.HasOne("ShopSphere.Domain.Entities.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRevoked")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsUsed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Token");
-
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.HasOne("ShopSphere.Domain.Entities.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -304,6 +429,21 @@ namespace ShopSphere.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ShopSphere.Domain.Entities.Category", b =>
+                {
+                    b.HasOne("ShopSphere.Domain.Entities.Category", "ParentCategory")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("ParentCategory");
+                });
+
+            modelBuilder.Entity("ShopSphere.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Children");
                 });
 #pragma warning restore 612, 618
         }

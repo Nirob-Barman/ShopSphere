@@ -3,12 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ShopSphere.Application.Interfaces;
+using ShopSphere.Application.Interfaces.Category;
 using ShopSphere.Application.Interfaces.Email;
+using ShopSphere.Application.Interfaces.Persistence;
+using ShopSphere.Application.Interfaces.Products;
 using ShopSphere.Application.Settings;
 using ShopSphere.Application.Settings.Email;
 using ShopSphere.Infrastructure.Identity;
 using ShopSphere.Infrastructure.Identity.Entity;
 using ShopSphere.Infrastructure.Persistence;
+using ShopSphere.Infrastructure.Persistence.Repositories;
 using ShopSphere.Infrastructure.Services;
 
 namespace ShopSphere.Infrastructure.DependencyInjection
@@ -42,6 +46,12 @@ namespace ShopSphere.Infrastructure.DependencyInjection
 
             services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
             services.AddScoped<IEmailService, EmailService>();
+
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
+
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IProductService, ProductService>();
 
             return services;
         }
