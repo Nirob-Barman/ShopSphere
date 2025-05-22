@@ -3,10 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ShopSphere.Application.Interfaces;
+using ShopSphere.Application.Interfaces.Email;
 using ShopSphere.Application.Settings;
+using ShopSphere.Application.Settings.Email;
 using ShopSphere.Infrastructure.Identity;
 using ShopSphere.Infrastructure.Identity.Entity;
 using ShopSphere.Infrastructure.Persistence;
+using ShopSphere.Infrastructure.Services;
 
 namespace ShopSphere.Infrastructure.DependencyInjection
 {
@@ -36,6 +39,9 @@ namespace ShopSphere.Infrastructure.DependencyInjection
 
             services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IIdentityService, IdentityService>();
+
+            services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
+            services.AddScoped<IEmailService, EmailService>();
 
             return services;
         }

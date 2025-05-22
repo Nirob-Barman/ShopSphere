@@ -1,12 +1,16 @@
 ﻿
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ShopSphere.Application.DTOs.Auth;
 using ShopSphere.Application.Interfaces;
+using ShopSphere.Application.Interfaces.Email;
 using ShopSphere.Application.Validators.Auth;
 using ShopSphere.Application.Wrappers;
 using ShopSphere.Infrastructure.Identity.Entity;
 using ShopSphere.Infrastructure.Persistence;
+using System.Net;
+using System.Security.Claims;
 
 namespace ShopSphere.Infrastructure.Identity
 {
@@ -16,17 +20,17 @@ namespace ShopSphere.Infrastructure.Identity
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public IdentityService(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            IJwtTokenService jwtTokenService,
-            ApplicationDbContext context)
+        public IdentityService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IJwtTokenService jwtTokenService, ApplicationDbContext context, IEmailService emailService, IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _jwtTokenService = jwtTokenService;
             _context = context;
+            _emailService = emailService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<ApiResponse<RegisterResponse>> RegisterAsync(RegisterRequest request)
@@ -64,6 +68,10 @@ namespace ShopSphere.Infrastructure.Identity
 
                 await _userManager.AddToRoleAsync(user, request.Role);
                 await transaction.CommitAsync();
+
+                var welcomeMessage = $"Hello {request.FullName},<br>Welcome to ShopSphere! Thank you for registering.";
+                await _emailService.SendEmailAsync(user.Email!, "Welcome to ShopSphere", welcomeMessage);
+
                 var registerResponse = new RegisterResponse(user.Email!, user.FullName!, request.Role);
                 return ApiResponse<RegisterResponse>.CreatedResponse(registerResponse, "User registered successfully");
             }
@@ -96,6 +104,30 @@ namespace ShopSphere.Infrastructure.Identity
 
             var tokens = await GenerateTokensAsync(user);
             return ApiResponse<AuthResponse>.SuccessResponse(tokens, "User Logged In successfully");
+        }
+
+        public async Task<ApiResponse<UserProfileResponse>> GetCurrentUserAsync(ClaimsPrincipal userPrincipal)
+        {
+            var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return ApiResponse<UserProfileResponse>.UnauthorizedResponse("User ID not found in token.");
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ApiResponse<UserProfileResponse>.NotFoundResponse("User not found.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var profile = new UserProfileResponse
+            {
+                Id = user.Id,
+                Email = user.Email!,
+                UserName = user.UserName!,
+                FullName = user.FullName,
+                Roles = roles.ToList()
+            };
+
+            return ApiResponse<UserProfileResponse>.SuccessResponse(profile, "User profile retrieved.");
         }
 
         public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
@@ -161,5 +193,46 @@ namespace ShopSphere.Infrastructure.Identity
                 Role = roles.FirstOrDefault() ?? "Customer"
             };
         }
+
+        public async Task<ApiResponse<string>> RequestPasswordResetAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return ApiResponse<string>.NotFoundResponse("User not found");
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            //var resetLink = $"https://yourfrontend.com/reset-password?email={WebUtility.UrlEncode(email)}&token={WebUtility.UrlEncode(token)}";
+
+
+            var request = _httpContextAccessor.HttpContext?.Request;
+            var baseUrl = $"{request?.Scheme}://{request?.Host}";
+            var resetLink = $"{baseUrl}/reset-password?email={WebUtility.UrlEncode(email)}&token={WebUtility.UrlEncode(token)}";
+            var message = $"<p>Hi {user.FullName},</p><p>Click <a href='{resetLink}'>here</a> to reset your password.</p>";
+
+            await _emailService.SendEmailAsync(user.Email!, "Password Reset Request", message);
+
+            return ApiResponse<string>.SuccessResponse("Password reset link has been sent to your email.");
+        }
+
+        public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email!);
+            if (user == null)
+                return ApiResponse<string>.NotFoundResponse("User not found");
+
+            //var result = await _userManager.ResetPasswordAsync(user, request.Token!, request.NewPassword!);
+            var decodedToken = WebUtility.UrlDecode(request.Token);
+            var result = await _userManager.ResetPasswordAsync(user, decodedToken!, request.NewPassword!);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description).ToArray();
+                return ApiResponse<string>.BadRequestResponse("Password reset failed", errors);
+            }
+
+            return ApiResponse<string>.SuccessResponse("Password has been reset successfully.");
+        }
+
+
     }
 }
