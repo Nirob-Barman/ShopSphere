@@ -8,6 +8,7 @@ using ShopSphere.Application.Interfaces;
 using ShopSphere.Application.Interfaces.Email;
 using ShopSphere.Application.Validators.Auth;
 using ShopSphere.Application.Wrappers;
+using ShopSphere.Domain.Entities;
 using ShopSphere.Infrastructure.Identity.Entity;
 using ShopSphere.Infrastructure.Persistence;
 using System.Net;

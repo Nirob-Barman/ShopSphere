@@ -1,7 +1,6 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ShopSphere.Infrastructure.Identity.Entity;
+using ShopSphere.Domain.Entities;
 
 namespace ShopSphere.Infrastructure.Persistence.Configuration
 {

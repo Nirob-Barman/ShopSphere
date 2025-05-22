@@ -1,8 +1,8 @@
 ﻿
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using ShopSphere.Domain.Entities;
 using ShopSphere.Infrastructure.Identity.Entity;
-using System;
 
 namespace ShopSphere.Infrastructure.Persistence
 {

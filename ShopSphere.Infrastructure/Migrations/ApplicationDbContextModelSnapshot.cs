@@ -252,7 +252,7 @@ namespace ShopSphere.Infrastructure.Migrations
 
                     b.HasKey("Token");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

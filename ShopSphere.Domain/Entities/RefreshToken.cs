@@ -1,5 +1,5 @@
 ﻿
-namespace ShopSphere.Infrastructure.Identity.Entity
+namespace ShopSphere.Domain.Entities
 {
     public class RefreshToken
     {
