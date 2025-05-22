@@ -136,6 +136,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
+            var errors = IdentityRequestValidator.ValidateRefreshTokenRequest(request);
+            if (errors.Any())
+                throw new ArgumentException(string.Join(", ", errors));
+
             var token = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
 
             if (token == null || token.IsUsed || token.IsRevoked || token.ExpiresAt < DateTime.UtcNow)
@@ -155,6 +159,11 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<string>> LogoutAsync(string refreshToken)
         {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", new[] { "Refresh token must not be empty." });
+            }
+
             var token = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
             if (token == null)
                 return ApiResponse<string>.NotFoundResponse("Refresh token not found");
@@ -202,6 +211,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<string>> RequestPasswordResetAsync(string email)
         {
+            var validationErrors = IdentityRequestValidator.ValidatePasswordResetRequestEmail(email);
+            if (validationErrors.Any())
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
+
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 return ApiResponse<string>.NotFoundResponse("User not found");
@@ -223,6 +236,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest request)
         {
+            var validationErrors = IdentityRequestValidator.ValidateResetPasswordRequest(request);
+            if (validationErrors.Any())
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
+
             var user = await _userManager.FindByEmailAsync(request.Email!);
             if (user == null)
                 return ApiResponse<string>.NotFoundResponse("User not found");
@@ -241,6 +258,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<RoleActionResponse>> CreateRoleAsync(CreateRoleRequest request)
         {
+            var validationErrors = IdentityRequestValidator.ValidateCreateRoleRequest(request);
+            if (validationErrors.Any())
+                return ApiResponse<RoleActionResponse>.ValidationErrorResponse("Validation failed", validationErrors);
+
             //var roleExists = await _roleManager.RoleExistsAsync(request.RoleName!);
             var roleExists = await RoleExistsAsync(request.RoleName!);
             if (roleExists)
@@ -263,6 +284,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<RoleActionResponse>> DeleteRoleAsync(DeleteRoleRequest request)
         {
+            var validationErrors = IdentityRequestValidator.ValidateDeleteRoleRequest(request);
+            if (validationErrors.Any())
+                return ApiResponse<RoleActionResponse>.ValidationErrorResponse("Validation failed", validationErrors);
+
             if (string.IsNullOrWhiteSpace(request.RoleName))
             {
                 return ApiResponse<RoleActionResponse>.ValidationErrorResponse("Validation failed", new[] { "Role name must not be empty." });
@@ -300,6 +325,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<RoleAssignmentResponse>> AssignRoleAsync(AssignRoleRequest request)
         {
+            var validationErrors = IdentityRequestValidator.ValidateAssignRoleRequest(request);
+            if (validationErrors.Any())
+                return ApiResponse<RoleAssignmentResponse>.ValidationErrorResponse("Validation failed", validationErrors);
+
             //var user = await _userManager.FindByIdAsync(request.UserId!);
             var user = await FindUserByIdAsync(request.UserId!);
             if (user == null)
@@ -332,6 +361,10 @@ namespace ShopSphere.Infrastructure.Identity
 
         public async Task<ApiResponse<RoleRemovalResponse>> RemoveRoleAsync(RemoveRoleRequest request)
         {
+            var validationErrors = IdentityRequestValidator.ValidateRemoveRoleRequest(request);
+            if (validationErrors.Any())
+                return ApiResponse<RoleRemovalResponse>.ValidationErrorResponse("Validation failed", validationErrors);
+
             //var user = await _userManager.FindByIdAsync(request.UserId!);
             var user = await FindUserByIdAsync(request.UserId!);
             if (user == null)
