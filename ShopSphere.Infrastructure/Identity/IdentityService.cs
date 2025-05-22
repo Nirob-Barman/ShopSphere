@@ -44,7 +44,8 @@ namespace ShopSphere.Infrastructure.Identity
                 return ApiResponse<RegisterResponse>.ValidationErrorResponse("Validation failed", validationErrors);
             }
 
-            var existingUser = await _userManager.FindByEmailAsync(request.Email!);
+            //var existingUser = await _userManager.FindByEmailAsync(request.Email!);
+            var existingUser = await FindByEmailAsync(request.Email!);
             if (existingUser != null)
             {
                 return ApiResponse<RegisterResponse>.ConflictResponse("Registration failed", new[] { "A user with this email already exists." });
@@ -93,7 +94,8 @@ namespace ShopSphere.Infrastructure.Identity
             {
                 return ApiResponse<AuthResponse>.ValidationErrorResponse("Validation failed", validationErrors);
             }
-            var user = await _userManager.FindByEmailAsync(request.Email!);
+            //var user = await _userManager.FindByEmailAsync(request.Email!);
+            var user = await FindByEmailAsync(request.Email!);
             if (user == null)
             {
                 return ApiResponse<AuthResponse>.NotFoundResponse("Email not found");
@@ -215,7 +217,8 @@ namespace ShopSphere.Infrastructure.Identity
             if (validationErrors.Any())
                 return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
 
-            var user = await _userManager.FindByEmailAsync(email);
+            //var user = await _userManager.FindByEmailAsync(email);
+            var user = await FindByEmailAsync(email);
             if (user == null)
                 return ApiResponse<string>.NotFoundResponse("User not found");
 
@@ -240,7 +243,8 @@ namespace ShopSphere.Infrastructure.Identity
             if (validationErrors.Any())
                 return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
 
-            var user = await _userManager.FindByEmailAsync(request.Email!);
+            //var user = await _userManager.FindByEmailAsync(request.Email!);
+            var user = await FindByEmailAsync(request.Email!);
             if (user == null)
                 return ApiResponse<string>.NotFoundResponse("User not found");
 
@@ -399,6 +403,14 @@ namespace ShopSphere.Infrastructure.Identity
 
             var errors = result.Errors.Select(e => e.Description).ToArray();
             return ApiResponse<RoleRemovalResponse>.BadRequestResponse("Failed to remove role", errors);
+        }
+
+        private async Task<ApplicationUser?> FindByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            return await _userManager.FindByEmailAsync(email);
         }
 
         private async Task<ApplicationUser?> FindUserByIdAsync(string userId)
