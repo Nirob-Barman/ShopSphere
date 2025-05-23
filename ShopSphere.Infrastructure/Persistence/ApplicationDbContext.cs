@@ -13,6 +13,7 @@ namespace ShopSphere.Infrastructure.Persistence
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<LoginAudit> LoginAudits { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

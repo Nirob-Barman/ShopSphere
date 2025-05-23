@@ -1,11 +1,11 @@
-﻿
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ShopSphere.Application.DTOs.Admin;
 using ShopSphere.Application.DTOs.Auth;
 using ShopSphere.Application.Interfaces;
 using ShopSphere.Application.Interfaces.Email;
+using ShopSphere.Application.Interfaces.Persistence;
 using ShopSphere.Application.Validators.Auth;
 using ShopSphere.Application.Wrappers;
 using ShopSphere.Domain.Entities;
@@ -19,22 +19,22 @@ namespace ShopSphere.Infrastructure.Identity
     public class IdentityService : IIdentityService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public IdentityService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager, IJwtTokenService jwtTokenService, ApplicationDbContext context, IEmailService emailService, IHttpContextAccessor httpContextAccessor)
+        public IdentityService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager, IJwtTokenService jwtTokenService, ApplicationDbContext context, IEmailService emailService, IHttpContextAccessor httpContextAccessor, IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
-            _signInManager = signInManager;
             _roleManager = roleManager;
             _jwtTokenService = jwtTokenService;
             _context = context;
             _emailService = emailService;
             _httpContextAccessor = httpContextAccessor;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<ApiResponse<RegisterResponse>> RegisterAsync(RegisterRequest request)
@@ -108,8 +108,39 @@ namespace ShopSphere.Infrastructure.Identity
                 return ApiResponse<AuthResponse>.UnauthorizedResponse("Password is incorrect");
             }
 
-            var tokens = await GenerateTokensAsync(user);
-            return ApiResponse<AuthResponse>.SuccessResponse(tokens, "User Logged In successfully");
+            _unitOfWork.BeginTransaction();
+
+            try
+            {
+                var tokens = await GenerateTokensAsync(user);
+
+                #region Login Audit Logging
+                var httpContext = _httpContextAccessor.HttpContext;
+                var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
+                var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown";
+
+                var loginAudit = new LoginAudit
+                {
+                    UserId = user.Id,
+                    Email = user.Email!,
+                    LoginTime = DateTime.UtcNow,
+                    IpAddress = ipAddress,
+                    UserAgent = userAgent
+                };
+
+                _context.LoginAudits.Add(loginAudit);
+                //await _context.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+
+                #endregion
+
+                return ApiResponse<AuthResponse>.SuccessResponse(tokens, "User Logged In successfully");
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<ApiResponse<UserProfileResponse>> GetCurrentUserAsync(ClaimsPrincipal userPrincipal)
@@ -200,7 +231,7 @@ namespace ShopSphere.Infrastructure.Identity
             };
 
             _context.RefreshTokens.Add(refreshTokenEntity);
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
 
             return new AuthResponse
             {
