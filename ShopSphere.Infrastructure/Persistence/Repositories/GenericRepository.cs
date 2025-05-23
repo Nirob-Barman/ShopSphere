@@ -25,6 +25,19 @@ namespace ShopSphere.Infrastructure.Persistence.Repositories
             return await _dbSet.ToListAsync();
         }
 
+        public async Task<IEnumerable<T>> GetPagedAsync(int pageNumber, int pageSize)
+        {
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 10;
+
+            return await _dbSet.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+        }
+
+        public async Task<int> CountAsync()
+        {
+            return await _dbSet.CountAsync();
+        }
+
         public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
             return await _dbSet.Where(predicate).ToListAsync();
