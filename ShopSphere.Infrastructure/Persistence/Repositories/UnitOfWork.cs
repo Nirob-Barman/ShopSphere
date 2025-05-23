@@ -43,12 +43,12 @@ namespace ShopSphere.Infrastructure.Persistence.Repositories
 
 
         // Begin a transaction
-        public void BeginTransaction()
+        public async Task BeginTransaction()
         {
             if (_transaction != null)
                 throw new InvalidOperationException("A database transaction is already in progress. Cannot start a new one.");
 
-            _transaction = _context.Database.BeginTransaction();
+            _transaction = await _context.Database.BeginTransactionAsync();
         }
 
         // Commit the transaction

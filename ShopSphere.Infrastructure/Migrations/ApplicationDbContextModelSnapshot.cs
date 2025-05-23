@@ -247,6 +247,9 @@ namespace ShopSphere.Infrastructure.Migrations
                     b.Property<DateTime>("LoginTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("LogoutTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UserAgent")
                         .HasColumnType("nvarchar(max)");
 

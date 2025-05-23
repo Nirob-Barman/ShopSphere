@@ -108,7 +108,7 @@ namespace ShopSphere.Infrastructure.Identity
                 return ApiResponse<AuthResponse>.UnauthorizedResponse("Password is incorrect");
             }
 
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransaction();
 
             try
             {
@@ -198,15 +198,56 @@ namespace ShopSphere.Infrastructure.Identity
                 return ApiResponse<string>.ValidationErrorResponse("Validation failed", new[] { "Refresh token must not be empty." });
             }
 
-            var token = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
-            if (token == null)
-                return ApiResponse<string>.NotFoundResponse("Refresh token not found");
+            await _unitOfWork.BeginTransaction();
 
-            token.IsRevoked = true;
-            _context.RefreshTokens.Update(token);
-            await _context.SaveChangesAsync();
+            try
+            {
+                var token = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+                if (token == null)
+                {
+                    await _unitOfWork.RollbackAsync();
+                    return ApiResponse<string>.NotFoundResponse("Refresh token not found");
+                }
 
-            return ApiResponse<string>.SuccessResponse("Logout successful");
+                token.IsRevoked = true;
+                _context.RefreshTokens.Update(token);
+
+                var user = await _userManager.FindByIdAsync(token.UserId!);
+                var httpContext = _httpContextAccessor.HttpContext;
+                var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
+                var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown";
+
+                var loginAudit = await _context.LoginAudits.Where(la => la.UserId == user!.Id && la.LogoutTime == null).OrderByDescending(la => la.LoginTime).FirstOrDefaultAsync();
+
+                if (loginAudit != null)
+                {
+                    loginAudit.LogoutTime = DateTime.UtcNow;
+                    _context.LoginAudits.Update(loginAudit);
+                }
+                else
+                {
+                    // create a fallback log entry
+                    _context.LoginAudits.Add(new LoginAudit
+                    {
+                        UserId = user!.Id,
+                        Email = user.Email!,
+                        LoginTime = DateTime.UtcNow, // Not ideal, just a placeholder if login wasn't logged
+                        LogoutTime = DateTime.UtcNow,
+                        IpAddress = ipAddress,
+                        UserAgent = userAgent
+                    });
+                }
+
+                //await _context.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+
+                return ApiResponse<string>.SuccessResponse("Logout successful");
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
         }
 
         private async Task<AuthResponse> GenerateTokensAsync(ApplicationUser user)

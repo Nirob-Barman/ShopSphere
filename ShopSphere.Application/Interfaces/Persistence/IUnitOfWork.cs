@@ -6,7 +6,7 @@ namespace ShopSphere.Application.Interfaces.Persistence
         IRepository<T> Repository<T>() where T : class;
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-        void BeginTransaction();
+        Task BeginTransaction();
         Task CommitAsync();
         Task RollbackAsync();
     }
