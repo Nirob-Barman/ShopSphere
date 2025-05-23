@@ -1,6 +1,7 @@
 ﻿using ShopSphere.Application.DTOs.Products;
 using ShopSphere.Application.Interfaces.Persistence;
 using ShopSphere.Application.Interfaces.Products;
+using ShopSphere.Application.Validators.Product;
 using ShopSphere.Application.Wrappers;
 using ShopSphere.Domain.Entities;
 
@@ -58,6 +59,10 @@ namespace ShopSphere.Infrastructure.Services
 
         public async Task<ApiResponse<string>> AddAsync(CreateProductRequest request)
         {
+            var validationErrors = ProductRequestValidator.Validate(request);
+            if (validationErrors.Any())
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
+
             var product = new Product
             {
                 Id = Guid.NewGuid(),
@@ -78,6 +83,10 @@ namespace ShopSphere.Infrastructure.Services
 
         public async Task<ApiResponse<string>> UpdateAsync(UpdateProductRequest request)
         {
+            var validationErrors = ProductRequestValidator.Validate(request);
+            if (validationErrors.Any())
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
+
             var product = await _unitOfWork.Repository<Product>().GetByIdAsync(request.Id);
             if (product == null)
                 return ApiResponse<string>.NotFoundResponse("Product not found");

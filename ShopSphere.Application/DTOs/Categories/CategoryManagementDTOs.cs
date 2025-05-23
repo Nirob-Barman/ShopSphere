@@ -10,14 +10,14 @@
 
     public class CreateCategoryRequest
     {
-        public string Name { get; set; } = null!;
+        public string? Name { get; set; }
         public Guid? ParentCategoryId { get; set; }
     }
 
     public class UpdateCategoryRequest
     {
         public Guid Id { get; set; }
-        public string Name { get; set; } = null!;
+        public string? Name { get; set; }
         public Guid? ParentCategoryId { get; set; }
     }
 }

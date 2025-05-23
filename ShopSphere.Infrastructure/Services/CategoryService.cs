@@ -1,6 +1,7 @@
 ﻿using ShopSphere.Application.DTOs.Categories;
 using ShopSphere.Application.Interfaces.Category;
 using ShopSphere.Application.Interfaces.Persistence;
+using ShopSphere.Application.Validators.Category;
 using ShopSphere.Application.Wrappers;
 using ShopSphere.Domain.Entities;
 
@@ -48,6 +49,10 @@ namespace ShopSphere.Infrastructure.Services
 
         public async Task<ApiResponse<string>> AddAsync(CreateCategoryRequest request)
         {
+            var validationErrors = CategoryRequestValidator.Validate(request);
+            if (validationErrors.Any())
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
+
             var category = new Category
             {
                 Id = Guid.NewGuid(),
@@ -63,6 +68,10 @@ namespace ShopSphere.Infrastructure.Services
 
         public async Task<ApiResponse<string>> UpdateAsync(UpdateCategoryRequest request)
         {
+            var validationErrors = CategoryRequestValidator.Validate(request);
+            if (validationErrors.Any())
+                return ApiResponse<string>.ValidationErrorResponse("Validation failed", validationErrors);
+
             var category = await _unitOfWork.Repository<Category>().GetByIdAsync(request.Id);
             if (category == null)
                 return ApiResponse<string>.NotFoundResponse("Category not found");
