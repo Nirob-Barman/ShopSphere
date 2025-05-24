@@ -16,6 +16,7 @@ namespace ShopSphere.API.Controllers
             _identityService = identityService;
         }
 
+        [Authorize]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {

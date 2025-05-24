@@ -45,6 +45,23 @@ namespace ShopSphere.Infrastructure.Identity
                 return ApiResponse<RegisterResponse>.ValidationErrorResponse("Validation failed", validationErrors);
             }
 
+            var currentUser = _httpContextAccessor.HttpContext?.User;
+            if (currentUser == null || !currentUser.Identity!.IsAuthenticated)
+            {
+                return ApiResponse<RegisterResponse>.UnauthorizedResponse("You must be logged in as an Admin to register new users.");
+            }
+
+            var isAdmin = currentUser.IsInRole("Admin");
+            if (!isAdmin)
+            {
+                return ApiResponse<RegisterResponse>.ForbiddenResponse("Only Admins can register new users.");
+            }
+
+            if (request.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return ApiResponse<RegisterResponse>.BadRequestResponse("Registration failed", new[] { "You are not allowed to assign the 'Admin' role." });
+            }
+
             //var existingUser = await _userManager.FindByEmailAsync(request.Email!);
             var existingUser = await FindByEmailAsync(request.Email!);
             if (existingUser != null)
